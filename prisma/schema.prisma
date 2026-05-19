@@ -1,0 +1,213 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id          String   @id @default(uuid()) // same as supabase auth user id
+  // email     String   @unique
+  // password  String?
+  firstName   String
+  lastName    String
+  phoneNumber String
+  address     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  role        UserRole @default(CUSTOMER)
+  cart        Cart?
+  orders      Order[]
+
+  // @@index([email])
+  @@map("users")
+}
+
+model Category {
+  id          String        @id @default(uuid())
+  name        String        @unique
+  icon        String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  Product     Product[]
+  SubCategory SubCategory[]
+
+  @@map("categories")
+}
+
+model SubCategory {
+  id         String @id @default(uuid())
+  name       String
+  categoryId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  Product  Product[]
+  Category Category  @relation(fields: [categoryId], references: [id])
+
+  @@unique([name, categoryId])
+  @@map("subcategories")
+}
+
+model Product {
+  id            String         @id @default(uuid())
+  name          String
+  description   String         @db.Text
+  basePrice     Decimal        @db.Decimal(10, 2)
+  stock         Int            @default(0)
+  categoryId    String
+  subCategoryId String?
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  tags          Json?
+  keywords      Json?
+  slug          String         @unique
+  views         Int            @default(0)
+  salesCount    Int            @default(0)
+  ratings       Float          @default(0)
+  totalRatings  Int            @default(0)
+  OrderItem     OrderItem[]
+  ProductImage  ProductImage[]
+  Category      Category       @relation(fields: [categoryId], references: [id])
+  SubCategory   SubCategory?   @relation(fields: [subCategoryId], references: [id])
+  cartItems     CartItem[]
+
+  @@map("products")
+}
+
+model Cart {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User       @relation(fields: [userId], references: [id])
+  items CartItem[]
+
+  @@map("carts")
+}
+
+model CartItem {
+  id        String @id @default(uuid())
+  cartId    String
+  productId String
+  quantity  Int    @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, productId])
+  @@map("cart_items")
+}
+
+model ProductImage {
+  id        String   @id @default(uuid())
+  imageKey  String
+  // objectKey        String // object name of the image in the minio, remove url field later
+  url       String
+  productId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_images")
+}
+
+model Order {
+  id               String      @id @default(uuid())
+  userId           String
+  status           OrderStatus @default(PENDING)
+  orderNote        String?
+  deliveryLandmark String? // short landmark name
+  deliveryZone     String? // string (e.g. “Bole”, “Piazza”, “CMC”)
+  contactPhone     String? // delivery contact (not always same as user)
+  user             User        @relation(fields: [userId], references: [id])
+  totalPrice       Decimal     @db.Decimal(10, 2)
+  totalDeliveryFee Decimal     @db.Decimal(10, 2)
+  // expectedTime     DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  orderItems       OrderItem[]
+  Payment          Payment[]
+
+  @@index([userId])
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  productId  String
+  quantity   Int
+  price      Decimal  @db.Decimal(10, 2)
+  discount   Decimal  @db.Decimal(10, 2)
+  totalPrice Decimal  @db.Decimal(10, 2)
+  // status     ItemStatus @default(PENDING) // PENDING, CONFIRMED, REJECTED
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Payment {
+  id                String          @id @default(uuid())
+  orderId           String
+  paymentProvider   PaymentProvider @default(STAR_PAY)
+  paymentProviderId String // ID from the payment gateway (e.g., paymentIntentId for Stripe, orderId for PayPal)
+  status            PaymentStatus   @default(PENDING)
+  amount            Decimal         @db.Decimal(10, 2)
+  currency          String          @default("ETB")
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  metadata          Json? // For additional gateway info
+  order             Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([paymentProviderId])
+  @@index([orderId])
+}
+
+enum PaymentProvider {
+  STAR_PAY
+  CASH_ON_DELIVERY
+  TELEBIRR
+  CHAPA
+  CBE_BIRR
+  M_BIRR
+}
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  CAPTURED
+  FAILED
+  CANCELED
+  REFUNDED
+  REVERSED // PayPal-only
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  DELIVERED
+  CANCELLED
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}

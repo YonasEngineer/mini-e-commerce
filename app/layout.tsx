@@ -1,7 +1,14 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-
+import { ModalProvider } from "../context/QuickViewModalContext";
+import CartSidebarModal from "@/components/CartSidebarModal";
+import { CartModalProvider } from "../context/CartSidebarModalContext";
+// import Footer from "@/components/footer/Footer";
+import ScrollToTop from "@/components/common/ScrollToTop";
+// import { Notification } from "@/components/common/status-messages/Notification";
+// import { ProductAddedToCartOrWishlistNotification } from "@/components/common/status-messages/productAddedToCartOrWishlistNotification";
+import { ToastContainer } from "react-toastify";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -27,7 +34,22 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="">
+        <CartModalProvider>
+          <ModalProvider>
+            {/* <Header /> */}
+            {children}
+            {/* <QuickViewModal /> */}
+            <CartSidebarModal />
+            {/* Here i  use  one Toastcontainer for both notifications below*/}
+            {/* <Notification /> */}
+            {/* <ProductAddedToCartOrWishlistNotification /> */}
+            <ToastContainer />
+          </ModalProvider>
+        </CartModalProvider>
+        <ScrollToTop />
+        {/* <Footer /> */}
+      </body>
     </html>
   );
 }
