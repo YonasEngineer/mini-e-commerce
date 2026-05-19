@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Trash2, Plus, Minus } from "lucide-react";
 import { selectCartTotalPrice, useCartStore } from "@/store/cart-store";
 import Image from "next/image";
-
+import Link from "next/link";
 // interface CartItem {
 //   id: string;
 //   name: string;
@@ -27,6 +27,7 @@ import Image from "next/image";
 
 export default function Cart() {
   const cartItems = useCartStore((state) => state.items);
+  console.log("see the  cartItems ", cartItems);
   const subtotal = selectCartTotalPrice(cartItems);
   const decreaseItemQuantity = useCartStore(
     (state) => state.decreaseItemQuantity,
@@ -42,11 +43,6 @@ export default function Cart() {
   const deliveryFee = 500;
   const tax = Math.round(subtotal * 0.1);
   const total = subtotal + deliveryFee + tax;
-
-  const handleCheckout = () => {
-    console.log("Proceeding to checkout with notes:", deliveryNotes);
-    // Handle checkout logic here
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -202,12 +198,11 @@ export default function Cart() {
                 </div>
 
                 {/* Checkout Button */}
-                <Button
-                  onClick={handleCheckout}
-                  className="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold py-3 rounded-md transition"
-                >
-                  Proceed to Checkout
-                </Button>
+                <Link href={"/checkout"}>
+                  <Button className="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold py-3 rounded-md transition">
+                    Proceed to Checkout
+                  </Button>
+                </Link>
 
                 {/* Continue Shopping Link */}
                 <Button
