@@ -1,36 +1,165 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+🛒 Mini E-Commerce Platform
 
-## Getting Started
+A scalable, production-oriented mini e-commerce platform built with Next.js, TypeScript, Supabase, Zustand, TanStack Query, Formik, and Tailwind CSS, featuring authentication, product browsing, cart management, checkout, and StarPay payment integration.
 
-First, run the development server:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+🚀 Live Demo
+Production URL: https://mini-e-commerce-dkxg.vercel.app/
+GitHub Repository: https://github.com/YonasEngineer/mini-e-commerce
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+📁 Project Architecture
+## Key Architectural Decisions
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Feature-Based Folder Structure
+The project uses a feature-oriented structure for scalability and maintainability instead of grouping files only by type.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Zustand for Client State
+Zustand manages lightweight client/UI state such as:
+- Cart state
+- Cart sidebar modal
+- Temporary UI flags
 
-## Learn More
+### TanStack Query for Server State
+TanStack Query handles:
+- Product fetching
+- Server caching
+- Background refetching
+- Async loading/error states
 
-To learn more about Next.js, take a look at the following resources:
+### API Abstraction Layer
+Axios is centralized through reusable API clients to avoid duplicated request logic.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Secure Payment Architecture
+StarPay integration is implemented through Next.js server-side API routes to avoid exposing private credentials on the client.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Supabase as Backend Service
+Supabase is used for:
+- Authentication
+- Database
+- User sessions
+- Product and order storage
 
-## Deploy on Vercel
+MINI-E-COMMERCE/
+│
+├── app/                          # Next.js App Router
+│   ├── (main)/                   # Main application routes
+│   │   ├── cart/                 # Cart page
+│   │   ├── checkout/             # Checkout flow
+│   │   ├── payment/
+│   │   │   ├── success/          # Payment success page
+│   │   │   └── fail/             # Payment failure page
+│   │   └── product/
+│   │       └── [id]/
+│   │           ├── page.tsx      # Product details page
+│   │           
+│   │           
+│   │
+│   ├── api/                      # Backend API routes (Next.js server layer)
+│   │   ├── cart/                 # Cart APIs
+│   │   ├── pay/                  # Payment initiation
+│   │   └── starpay/
+│   │       └── callback/
+│   │           └── route.ts      # StarPay webhook/callback handler
+│   │
+│   ├── auth/                     # Authentication pages (Supabase)
+│   ├── layout.tsx               # Root layout
+│   ├── globals.css              # Global styles
+│   └── favicon.ico
+│
+├── components/                  # Reusable UI components
+│   ├── auth/                    # Auth components
+│   ├── cart/                    # Cart components
+│   ├── CartSidebarModal/       # Cart modal UI
+│   ├── checkout/               # Checkout components
+│   ├── common/                # Shared components
+│   │   ├── Footer.tsx
+│   │   ├── ScrollToTop.tsx
+│   │   └── header/
+│   ├── payment/
+│   │   └── Success.tsx
+│   ├── product/
+│   │   ├── Product.tsx
+│   │   └── ProductDetail.tsx
+│   └── ui/                     # Base UI components (buttons, inputs, etc.)
+│
+├── context/                    # React Context providers
+├── custom-hook/               # Custom hooks
+├── generated/                 # Auto-generated files (e.g. Prisma client)
+├── lib/                       # Utilities (axios, helpers, configs)
+├── prisma/                    # Database schema & migrations
+├── providers/                 # App providers (QueryClient, Auth, etc.)
+├── public/                    # Static assets
+├── seeder/                   # Database seeding scripts
+├── store/                    # Zustand state management
+├── types/                    # TypeScript types
+│
+├── .env                      # Environment variables
+├── .gitignore
+├── components.json          # UI config (likely shadcn)
+├── eslint.config.mjs
+├── next-env.d.ts
+├── next.config.ts
+├── package.json
+├── postcss.config.mjs
+├── prisma.config.ts
+├── README.md
+├── tsconfig.json
+└── tsconfig.tsbuildinfo
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Key Design Principle
+ UI is fully separated from business logic
+ API layer is abstracted via /api
+ Server communication is centralized through Axios instance
+ State management is split:
+ Zustand → UI state (cart, UI flags)
+ TanStack Query → server state (products, orders)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+ 
+🧾 Assumptions Made
+ Products are pre-seeded in Supabase
+ StarPay returns a redirect URL after initialization
+ User authentication is required before checkout
+ Cart is user-specific after login
+ Guest cart is supported locally before authentication
+
+## Tradeoffs Considered
+
+### Zustand vs Redux
+Zustand was chosen because it provides simpler boilerplate and faster development for medium-scale applications.
+
+### Guest Cart Persistence
+Guest carts are stored locally for improved UX before authentication, though syncing across devices is limited until login.
+
+### Prisma + Supabase
+Prisma improves type safety and database developer experience, although Supabase can work directly without Prisma.
+
+### Server-Side Payment Initialization
+Payment initialization adds additional backend complexity but improves security by protecting StarPay credentials.
+
+
+
+## Environment Variables
+
+Create a `.env.local` file in the root of the project and add the following variables:
+
+DATABASE_URL=
+Used by Prisma to connect to the Supabase PostgreSQL database via connection pooling.
+
+DIRECT_URL=
+Direct database connection used for Prisma migrations and schema changes (bypasses pooling).
+
+STARPAY_SECRET=
+Secret API key used on the server side to securely initialize payments with StarPay. Must never be exposed on the client.
+
+NEXT_PUBLIC_SUPABASE_URL=
+Public Supabase project URL used to initialize the Supabase client.
+
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+Public Supabase anon/publishable key used for authentication and client-side access to Supabase services.
+
+CALL_BACK_URL=
+Server-side endpoint that receives StarPay payment confirmation callbacks/webhooks after payment processing.
+
+REDIRECT_URL=
+Frontend URL where users are redirected after successful payment completion.
+
