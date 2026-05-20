@@ -4,14 +4,17 @@ import { useCartStore } from "@/store/cart-store";
 import { useState } from "react";
 import { selectCartTotalPrice } from "@/store/cart-store";
 import { useCartModalContext } from "@/context/CartSidebarModalContext";
-
+import Link from "next/link";
+import { Search } from "lucide-react";
+import { useAuthStore } from "@/store/auth-store";
+import { ShoppingCart } from "lucide-react";
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const cartItems = useCartStore((state) => state.items);
   const totalPrice = selectCartTotalPrice(cartItems);
+  const currentUser = useAuthStore((state) => state.user);
+
   const { openCartModal } = useCartModalContext();
-  const { isCartModalOpen } = useCartModalContext();
-  console.log("see the isCartModalOpen", isCartModalOpen);
   const handleOpenCartModal = () => {
     openCartModal();
   };
@@ -23,27 +26,29 @@ export default function Header() {
           {/* Logo */}
           <div className="flex items-center">
             {" "}
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded flex items-center justify-center font-bold text-gray-800">
-                F
+            <Link href={"/"}>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-primary rounded flex items-center justify-center font-bold text-gray-800">
+                  M
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-bold text-lg leading-none">Mini</span>
+                  <span className="text-xs text-yellow-400">E-commerce</span>
+                </div>
               </div>
-              <div className="flex flex-col">
-                <span className="font-bold text-lg leading-none">Flikia</span>
-                <span className="text-xs text-yellow-400">Delivery</span>
-              </div>
-            </div>
+            </Link>
           </div>
 
           {/* Search Bar - Hidden on mobile */}
           <div className="hidden md:flex items-center flex-1 mx-8">
             {/* Categories Dropdown */}
-            <select className="bg-gray-700 text-white px-4 py-2 rounded-l border-r border-gray-600 outline-none cursor-pointer hover:bg-gray-600 transition">
+            {/* <select className="bg-gray-700 text-white px-4 py-2 rounded-l border-r border-gray-600 outline-none cursor-pointer hover:bg-gray-600 transition">
               <option>All Categories</option>
               <option>Electronics</option>
               <option>Food & Drinks</option>
               <option>Fashion</option>
               <option>Books</option>
-            </select>
+            </select> */}
 
             {/* Search Input */}
             <input
@@ -53,15 +58,15 @@ export default function Header() {
             />
 
             {/* Search Button */}
-            <button className="bg-yellow-400 text-gray-800 px-6 py-2 rounded-r font-semibold hover:bg-yellow-500 transition">
-              🔍
+            <button className="bg-yellow-400 text-gray-800 px-6 py-[10px] rounded-r font-semibold hover:bg-yellow-500 transition">
+              <Search className="w-5 h-5" />
             </button>
           </div>
 
           {/* Right Section - Hidden on mobile */}
           <div className="hidden md:flex items-center gap-8">
             {/* Support */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col items-center text-center">
               <span className="text-xs text-gray-400">24/7 SUPPORT</span>
               <span className="text-sm font-semibold">+1 (212) 555-1234</span>
             </div>
@@ -69,7 +74,9 @@ export default function Header() {
             {/* Account */}
             <div className="flex items-center gap-2 cursor-pointer hover:text-yellow-400 transition">
               <span className="text-lg">👤</span>
-              <span className="text-sm">Sign In</span>
+              <Link href="/auth">
+                <span className="text-sm">{` ${currentUser ? currentUser.email : "Sign In"}`}</span>
+              </Link>
             </div>
 
             {/* Cart */}
@@ -77,7 +84,9 @@ export default function Header() {
               className="flex items-center gap-2 cursor-pointer hover:text-yellow-400 transition relative"
               onClick={handleOpenCartModal}
             >
-              <span className="text-lg">🛒</span>
+              <span className="text-lg">
+                <ShoppingCart className="w-5 h-5 text-primary" />
+              </span>
               <div className="flex flex-col">
                 <span className="text-sm">CART</span>
                 <span className="text-sm font-bold"> {totalPrice} </span>

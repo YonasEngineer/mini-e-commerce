@@ -8,7 +8,7 @@ interface CartModalContextType {
 }
 
 const CartModalContext = createContext<CartModalContextType | undefined>(
-  undefined
+  undefined,
 );
 
 export const useCartModalContext = () => {
@@ -23,7 +23,7 @@ interface CartModalProviderProps {
   children: ReactNode;
 }
 
-export const CartModalProvider = ({ children }:CartModalProviderProps) => {
+export const CartModalProvider = ({ children }: CartModalProviderProps) => {
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
 
   const openCartModal = () => {

@@ -12,7 +12,7 @@ datasource db {
   provider = "postgresql"
 }
 
-model User {
+model Profile {
   id          String   @id @default(uuid()) // same as supabase auth user id
   // email     String   @unique
   // password  String?
@@ -27,7 +27,7 @@ model User {
   orders      Order[]
 
   // @@index([email])
-  @@map("users")
+  @@map("profile")
 }
 
 model Category {
@@ -90,7 +90,7 @@ model Cart {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user  User       @relation(fields: [userId], references: [id])
+  user  Profile    @relation(fields: [userId], references: [id])
   items CartItem[]
 
   @@map("carts")
@@ -129,11 +129,12 @@ model Order {
   id               String      @id @default(uuid())
   userId           String
   status           OrderStatus @default(PENDING)
-  orderNote        String?
+  additionalNote   String?
+  deliveryStreet   String?
   deliveryLandmark String? // short landmark name
   deliveryZone     String? // string (e.g. “Bole”, “Piazza”, “CMC”)
   contactPhone     String? // delivery contact (not always same as user)
-  user             User        @relation(fields: [userId], references: [id])
+  user             Profile     @relation(fields: [userId], references: [id])
   totalPrice       Decimal     @db.Decimal(10, 2)
   totalDeliveryFee Decimal     @db.Decimal(10, 2)
   // expectedTime     DateTime?

@@ -1,122 +1,124 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Header from "../header";
-// import { Button } from "@/components/ui/button";
+import axios from "axios";
+import { useFormik } from "formik";
+import * as Yup from "yup";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { ChevronLeft, Phone, MapPin, User, Loader2 } from "lucide-react";
 import { selectCartTotalPrice, useCartStore } from "@/store/cart-store";
+import { useAuthStore } from "@/store/auth-store";
+import { CheckoutFormValues } from "@/types/checkout";
+
+const phoneRegExp = /^(\+?251|0)[0-9]{9}$/;
+
+const checkoutValidationSchema = Yup.object({
+  fullName: Yup.string().trim().required("Full name is required"),
+  phoneNumber: Yup.string()
+    .transform((value: string | undefined) => value?.replace(/\s/g, "") || "")
+    .matches(phoneRegExp, "Enter a valid Ethiopian phone number")
+    .required("Phone number is required"),
+  deliveryStreet: Yup.string().trim().required("Street address is required"),
+  additionalNote: Yup.string().trim(),
+  deliveryZone: Yup.string().trim().required("Delivery zone is required"),
+  deliveryLandmark: Yup.string()
+    .trim()
+    .required("Delivery landmark is required"),
+});
 
 export default function Checkout() {
   const router = useRouter();
-  // const [cartData, setCartData] = useState<CartData | null>(null);
   const cartItems = useCartStore((state) => state.items);
+  const currentUser = useAuthStore((state) => state.user);
+  // console.log("see the currentUser", currentUser);
   const subtotal = selectCartTotalPrice(cartItems);
   const deliveryFee = 500;
   const tax = Math.round(subtotal * 0.1);
   const total = subtotal + deliveryFee + tax;
 
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    fullName: "",
-    phoneNumber: "",
-    address: "",
-    city: "",
-    zipCode: "",
+  const formik = useFormik<CheckoutFormValues>({
+    initialValues: {
+      fullName: "",
+      phoneNumber: "",
+      deliveryStreet: "",
+      additionalNote: "",
+      deliveryZone: "",
+      deliveryLandmark: "",
+    },
+    validationSchema: checkoutValidationSchema,
+    onSubmit: async (values, { setStatus, setSubmitting }) => {
+      setStatus(undefined);
+
+      if (!currentUser?.id) {
+        setStatus("Please sign in before placing an order.");
+        setSubmitting(false);
+        return;
+      }
+
+      try {
+        const { data } = await axios.post(
+          "/api/pay",
+          {
+            userId: currentUser.id,
+            customerEmail: currentUser.email,
+            customerName: values.fullName.trim(),
+            phoneNumber: values.phoneNumber.replace(/\s/g, ""),
+            amount: total,
+            totalDeliveryFee: deliveryFee,
+            deliveryStreet: values.deliveryStreet.trim(),
+            additionalNote: values.additionalNote.trim(),
+            deliveryZone: values.deliveryZone.trim(),
+            deliveryLandmark: values.deliveryLandmark.trim(),
+            items: cartItems.map((item) => ({
+              productId: item.id,
+              quantity: item.quantity,
+              itemName: item.name,
+              unitPrice: Number(item.basePrice),
+            })),
+          },
+          {
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+
+        if (data.payment_url) {
+          window.location.href = data.payment_url;
+        }
+      } catch (error) {
+        console.error("Payment error:", error);
+        setStatus(
+          axios.isAxiosError(error)
+            ? error.response?.data?.message || "Payment initiation failed"
+            : error instanceof Error
+              ? error.message
+              : "Failed to initiate payment. Please try again.",
+        );
+      } finally {
+        setSubmitting(false);
+      }
+    },
   });
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
+  const loading = formik.isSubmitting;
+  const getFieldError = (field: keyof CheckoutFormValues) =>
+    formik.touched[field] && formik.errors[field] ? formik.errors[field] : null;
 
-    if (!formData.fullName.trim()) newErrors.fullName = "Full name is required";
-    if (!formData.phoneNumber.trim()) {
-      newErrors.phoneNumber = "Phone number is required";
-    } else if (
-      !/^(\+?251|0)[0-9]{9}$/.test(formData.phoneNumber.replace(/\s/g, ""))
-    ) {
-      newErrors.phoneNumber = "Enter a valid Ethiopian phone number";
+  useEffect(() => {
+    if (!cartItems.length) {
+      router.push("/");
     }
-    if (!formData.address.trim()) newErrors.address = "Address is required";
-    if (!formData.city.trim()) newErrors.city = "City is required";
-    if (!formData.zipCode.trim()) newErrors.zipCode = "ZIP code is required";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    // Clear error for this field when user starts typing
-    if (errors[name]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
-    }
-  };
-
-  const handlePayment = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) return;
-
-    setLoading(true);
-    try {
-      // Call the backend API to initiate Star Pay payment
-      const response = await fetch("/api/pay", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: subtotal,
-          phoneNumber: formData.phoneNumber.replace(/\s/g, ""),
-          customerName: formData.fullName,
-          address: formData.address,
-          city: formData.city,
-          zipCode: formData.zipCode,
-          items: cartItems.map((item) => ({
-            productId: item.id,
-            quantity: item.quantity,
-            item_name: item.name,
-            unit_price: Number(item.basePrice),
-          })),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Payment initiation failed");
-      }
-
-      const data = await response.json();
-      console.log("see the   redirect URL >>>>>>>>>>>>>>>>", data);
-      // Redirect to Star Pay payment page
-      if (data.payment_url) {
-        window.location.href = data.payment_url;
-      }
-    } catch (error) {
-      console.error("Payment error:", error);
-      setErrors({ submit: "Failed to initiate payment. Please try again." });
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [cartItems.length, router]);
 
   if (!cartItems.length) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header />
         <main className="max-w-7xl mx-auto px-4 py-8">
           <div className="text-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto text-yellow-500" />
-            <p className="text-gray-600 mt-4">Loading...</p>
+            <Loader2 className=" w-12 h-12 animate-spin mx-auto text-yellow-500" />
+            <h1 className="text-gray-600 mt-4 text-2xl">Loading...</h1>
           </div>
         </main>
       </div>
@@ -125,75 +127,78 @@ export default function Checkout() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
-
       <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Back Button */}
-        <button
+        <Button
+          type="button"
           onClick={() => router.back()}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-8"
         >
           <ChevronLeft className="w-5 h-5" />
           Back to Cart
-        </button>
+        </Button>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Payment Form */}
-          <div className="lg:col-span-2">
+          <div className="order-2 lg:order-1 lg:col-span-2">
             <Card className="p-6 bg-white">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">
                 Delivery & Payment
               </h2>
 
-              <form onSubmit={handlePayment} className="space-y-6">
+              <form onSubmit={formik.handleSubmit} className="space-y-6">
                 {/* Personal Information */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                     <User className="w-5 h-5 text-yellow-500" />
-                    Personal Information
+                    Payment Information
                   </h3>
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Full Name
                       </label>
-                      <input
+                      <Input
                         type="text"
                         name="fullName"
-                        value={formData.fullName}
-                        onChange={handleInputChange}
+                        value={formik.values.fullName}
+                        onChange={formik.handleChange}
+                        onBlur={formik.handleBlur}
                         placeholder="Enter your full name"
                         className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 ${
-                          errors.fullName ? "border-red-500" : "border-gray-300"
+                          getFieldError("fullName")
+                            ? "border-red-500"
+                            : "border-gray-300"
                         }`}
                       />
-                      {errors.fullName && (
+                      {getFieldError("fullName") && (
                         <p className="text-red-500 text-sm mt-1">
-                          {errors.fullName}
+                          {getFieldError("fullName")}
                         </p>
                       )}
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                      <label className="text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
                         <Phone className="w-4 h-4" />
-                        Phone Number
+                        Phone Number (Your Start Pay Account Phone Number)
                       </label>
-                      <input
+                      <Input
                         type="tel"
                         name="phoneNumber"
-                        value={formData.phoneNumber}
-                        onChange={handleInputChange}
+                        value={formik.values.phoneNumber}
+                        onChange={formik.handleChange}
+                        onBlur={formik.handleBlur}
                         placeholder="e.g., +251912345678 or 0912345678"
                         className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 ${
-                          errors.phoneNumber
+                          getFieldError("phoneNumber")
                             ? "border-red-500"
                             : "border-gray-300"
                         }`}
                       />
-                      {errors.phoneNumber && (
+                      {getFieldError("phoneNumber") && (
                         <p className="text-red-500 text-sm mt-1">
-                          {errors.phoneNumber}
+                          {getFieldError("phoneNumber")}
                         </p>
                       )}
                     </div>
@@ -206,72 +211,100 @@ export default function Checkout() {
                     <MapPin className="w-5 h-5 text-yellow-500" />
                     Delivery Address
                   </h3>
-                  <div className="space-y-4">
-                    <div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Street Address
                       </label>
-                      <input
+                      <Input
                         type="text"
-                        name="address"
-                        value={formData.address}
-                        onChange={handleInputChange}
+                        name="deliveryStreet"
+                        value={formik.values.deliveryStreet}
+                        onChange={formik.handleChange}
+                        onBlur={formik.handleBlur}
                         placeholder="Enter street address"
                         className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 ${
-                          errors.address ? "border-red-500" : "border-gray-300"
+                          getFieldError("deliveryStreet")
+                            ? "border-red-500"
+                            : "border-gray-300"
                         }`}
                       />
-                      {errors.address && (
+                      {getFieldError("deliveryStreet") && (
                         <p className="text-red-500 text-sm mt-1">
-                          {errors.address}
+                          {getFieldError("deliveryStreet")}
                         </p>
                       )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          City
-                        </label>
-                        <input
-                          type="text"
-                          name="city"
-                          value={formData.city}
-                          onChange={handleInputChange}
-                          placeholder="e.g., Addis Ababa"
-                          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 ${
-                            errors.city ? "border-red-500" : "border-gray-300"
-                          }`}
-                        />
-                        {errors.city && (
-                          <p className="text-red-500 text-sm mt-1">
-                            {errors.city}
-                          </p>
-                        )}
-                      </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Delivery Zone
+                      </label>
+                      <Input
+                        type="text"
+                        name="deliveryZone"
+                        value={formik.values.deliveryZone}
+                        onChange={formik.handleChange}
+                        onBlur={formik.handleBlur}
+                        placeholder="e.g. Bole, Piazza, CMC"
+                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 ${
+                          getFieldError("deliveryZone")
+                            ? "border-red-500"
+                            : "border-gray-300"
+                        }`}
+                      />
+                      {getFieldError("deliveryZone") && (
+                        <p className="text-red-500 text-sm mt-1">
+                          {getFieldError("deliveryZone")}
+                        </p>
+                      )}
+                    </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          ZIP Code
-                        </label>
-                        <input
-                          type="text"
-                          name="zipCode"
-                          value={formData.zipCode}
-                          onChange={handleInputChange}
-                          placeholder="Enter ZIP code"
-                          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 ${
-                            errors.zipCode
-                              ? "border-red-500"
-                              : "border-gray-300"
-                          }`}
-                        />
-                        {errors.zipCode && (
-                          <p className="text-red-500 text-sm mt-1">
-                            {errors.zipCode}
-                          </p>
-                        )}
-                      </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Delivery Landmark
+                      </label>
+                      <Input
+                        type="text"
+                        name="deliveryLandmark"
+                        value={formik.values.deliveryLandmark}
+                        onChange={formik.handleChange}
+                        onBlur={formik.handleBlur}
+                        placeholder="Short landmark name"
+                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 ${
+                          getFieldError("deliveryLandmark")
+                            ? "border-red-500"
+                            : "border-gray-300"
+                        }`}
+                      />
+                      {getFieldError("deliveryLandmark") && (
+                        <p className="text-red-500 text-sm mt-1">
+                          {getFieldError("deliveryLandmark")}
+                        </p>
+                      )}
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Additional Note(Optional)
+                      </label>
+                      <Input
+                        type="text"
+                        name="additionalNote"
+                        value={formik.values.additionalNote}
+                        onChange={formik.handleChange}
+                        onBlur={formik.handleBlur}
+                        placeholder="Apartment, gate code, or delivery note"
+                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 ${
+                          getFieldError("additionalNote")
+                            ? "border-red-500"
+                            : "border-gray-300"
+                        }`}
+                      />
+                      {getFieldError("additionalNote") && (
+                        <p className="text-red-500 text-sm mt-1">
+                          {getFieldError("additionalNote")}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -290,13 +323,13 @@ export default function Checkout() {
                   </p>
                 </div>
 
-                {errors.submit && (
+                {formik.status && (
                   <div className="bg-red-50 border border-red-200 p-4 rounded text-red-700 text-sm">
-                    {errors.submit}
+                    {formik.status}
                   </div>
                 )}
 
-                <button
+                <Button
                   type="submit"
                   disabled={loading}
                   className="w-full bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 text-gray-900 font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
@@ -309,13 +342,13 @@ export default function Checkout() {
                   ) : (
                     `Pay Now • ${total} ETB`
                   )}
-                </button>
+                </Button>
               </form>
             </Card>
           </div>
 
           {/* Order Summary Sidebar */}
-          <div className="lg:col-span-1">
+          <div className="order-1 lg:order-2 lg:col-span-1">
             <Card className="p-6 bg-white sticky top-24">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Order Summary
@@ -330,13 +363,10 @@ export default function Checkout() {
                   >
                     <div>
                       <p className="font-medium text-gray-800">{item.name}</p>
-                      <p className="text-gray-600 text-xs">x{item.quantity}</p>
+                      <p className="text-gray-600 text-xs">{item.quantity}</p>
                     </div>
                     <p className="font-semibold text-gray-800">
-                      {((Number(item.basePrice) * item.quantity) / 100).toFixed(
-                        2,
-                      )}{" "}
-                      ETB
+                      {(Number(item.basePrice) * item.quantity).toFixed(2)} ETB
                     </p>
                   </div>
                 ))}
@@ -346,7 +376,7 @@ export default function Checkout() {
               <div className="space-y-2 mb-4 pb-4 border-b text-sm">
                 <div className="flex justify-between text-gray-700">
                   <span>Subtotal</span>
-                  <span>{(subtotal / 100).toFixed(2)} ETB</span>
+                  <span>{subtotal} ETB</span>
                 </div>
                 <div className="flex justify-between text-gray-700">
                   <span>Delivery Fee</span>
@@ -365,16 +395,6 @@ export default function Checkout() {
                   {total} ETB
                 </span>
               </div>
-
-              {/* Delivery Notes */}
-              {/* {cartData.deliveryNotes && (
-                <div className="bg-blue-50 p-3 rounded-lg text-sm">
-                  <p className="text-gray-700 font-medium mb-1">
-                    Delivery Notes
-                  </p>
-                  <p className="text-gray-600">{cartData.deliveryNotes}</p>
-                </div>
-              )} */}
             </Card>
           </div>
         </div>

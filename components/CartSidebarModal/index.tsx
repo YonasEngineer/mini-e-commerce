@@ -5,12 +5,10 @@ import SingleItem from "./SingleItem";
 import Link from "next/link";
 import EmptyCart from "./EmptyCart";
 import { selectCartTotalPrice, useCartStore } from "@/store/cart-store";
-// import isArrayWithElements from "@/utils/IsArrayWithElements";
 const CartSidebarModal = () => {
   const { isCartModalOpen, closeCartModal } = useCartModalContext();
   const cartItems = useCartStore((state) => state.items);
   const totalPrice = selectCartTotalPrice(cartItems);
-  console.log("see the isCartModalOpen ", isCartModalOpen);
   useEffect(() => {
     // closing modal while clicking outside
     function handleClickOutside(event: MouseEvent) {
@@ -36,7 +34,7 @@ const CartSidebarModal = () => {
       }`}
     >
       <div className="flex items-center justify-end">
-        <div className="w-full max-w-[500px] shadow-1 bg-white px-4 sm:px-7.5 lg:px-11 relative modal-content">
+        <div className="w-full max-w-125 shadow-1 bg-white px-4 sm:px-7.5 lg:px-11 relative modal-content">
           <div className="sticky top-0 bg-white flex items-center justify-between pb-7 pt-4 sm:pt-7.5 lg:pt-11 border-b border-gray-3 mb-7.5">
             <h2 className="font-medium text-dark text-lg sm:text-2xl">
               Cart View
@@ -86,15 +84,15 @@ const CartSidebarModal = () => {
               <p className="font-medium text-xl text-dark">Subtotal:</p>
 
               <p className="font-medium text-xl text-dark">
-                ${Math.ceil(totalPrice)}
+                ETB {Math.ceil(totalPrice)}
               </p>
             </div>
 
-            <div className="flex items-center gap-4 bg-primary ">
+            <div className="flex items-center gap-4 bg-primary">
               <Link
                 onClick={() => closeCartModal()}
                 href="/cart"
-                className="w-full flex justify-center font-medium text-white  py-[13px] px-6 rounded-md ease-out duration-200"
+                className="w-full flex justify-center font-medium text-white  py-3.25 px-6 rounded-md ease-out duration-200"
               >
                 View Cart
               </Link>

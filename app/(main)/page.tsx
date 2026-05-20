@@ -1,4 +1,3 @@
-import Header from "@/components/header";
 import { prisma } from "@/lib/prisma";
 import Product from "@/components/product/Product";
 export default async function Home() {
@@ -9,7 +8,6 @@ export default async function Home() {
   });
   return (
     <main>
-      <Header />
       <Product products={products} />
     </main>
   );

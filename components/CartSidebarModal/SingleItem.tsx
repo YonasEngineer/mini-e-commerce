@@ -4,19 +4,17 @@ import Image from "next/image";
 // import { ProductItem } from "@/types/product";
 import { CartItem } from "@/store/cart-store";
 import { useCartStore } from "@/store/cart-store";
+import { useAuthStore } from "@/store/auth-store";
 interface PropsType {
   item: CartItem;
 }
 
 const SingleItem: FC<PropsType> = ({ item }) => {
   const removeItemFromCart = useCartStore((state) => state.removeItem);
-  console.log("see the cart item", item);
-  console.log(
-    "see the item.ProductImage?.[0]?.url",
-    item.ProductImage?.[0]?.url,
-  );
+  const currentUser = useAuthStore((state) => state.user);
+
   const handleRemoveFromCart = () => {
-    removeItemFromCart(item?.id);
+    removeItemFromCart(item?.id, currentUser);
   };
   // const [firstProductImage] = Array.isArray(item?.ProductImage)
   //   ? item.ProductImage
@@ -24,7 +22,7 @@ const SingleItem: FC<PropsType> = ({ item }) => {
   return (
     <div className="flex items-center justify-between gap-5">
       <div className="w-full flex items-center gap-6">
-        <div className="flex items-center justify-center rounded-[10px] bg-gray-3 max-w-[90px] w-full">
+        <div className="flex items-center justify-center rounded-[10px] bg-gray-3 max-w-22.5 w-full">
           <Image
             src={item.ProductImage?.[0]?.url ?? ""}
             alt={item.name}
@@ -38,14 +36,16 @@ const SingleItem: FC<PropsType> = ({ item }) => {
             <a href="#"> {item.name} </a>
           </h3>
 
-          <p className="text-custom-sm">Price: ${item.basePrice.toString()}</p>
+          <p className="text-custom-sm">
+            Price: ETB {item.basePrice.toString()}
+          </p>
         </div>
       </div>
 
       <button
         onClick={handleRemoveFromCart}
         aria-label="button for remove product from cart"
-        className="flex items-center justify-center rounded-lg max-w-[38px] w-full h-9.5 bg-gray-2 border border-gray-3 text-dark ease-out duration-200 hover:bg-red-light-6 hover:border-red-light-4 hover:text-red"
+        className="flex items-center justify-center rounded-lg max-w-9.5 w-full h-9.5 bg-gray-2 border border-gray-3 text-dark ease-out duration-200 hover:bg-red-light-6 hover:border-red-light-4 hover:text-red"
       >
         <svg
           className="fill-current"

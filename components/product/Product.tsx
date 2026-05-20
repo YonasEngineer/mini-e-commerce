@@ -3,6 +3,8 @@ import Image from "next/image";
 import React from "react";
 import { useCartStore } from "@/store/cart-store";
 import { ProductItem } from "@/types/product";
+import { useAuthStore } from "@/store/auth-store";
+import Link from "next/link";
 
 type ProductProps = {
   products: ProductItem[];
@@ -10,11 +12,12 @@ type ProductProps = {
 
 const Product = ({ products }: ProductProps) => {
   const addItem = useCartStore((state) => state.addItem);
+  const currentUser = useAuthStore((state) => state.user);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
       <h1 className="text-4xl font-bold text-gray-800 mb-4">
-        Welcome to Flikia Delivery
+        Welcome to Mini E-commerce
       </h1>
 
       <p className="text-gray-600 mb-8">
@@ -46,18 +49,19 @@ const Product = ({ products }: ProductProps) => {
               <h3 className="font-semibold text-gray-800 mb-2">
                 {product.name}
               </h3>
-
-              <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                {product.description}
-              </p>
+              <Link href={`/product/${product.id}`}>
+                <p className="text-gray-600 text-sm mb-4 line-clamp-2 hover:text-yellow-500">
+                  {product.description}
+                </p>
+              </Link>
 
               <div className="flex justify-between items-center">
                 <span className="font-bold text-lg text-gray-800">
-                  ${product.basePrice.toString()}
+                  ETB {product.basePrice.toString()}
                 </span>
 
                 <button
-                  onClick={() => addItem(product)}
+                  onClick={() => addItem(product, currentUser)}
                   className="bg-yellow-400 text-gray-800 px-4 py-2 rounded font-semibold hover:bg-yellow-500 transition text-sm"
                 >
                   Add to Cart
