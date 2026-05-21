@@ -2,11 +2,12 @@
 
 A scalable, production-oriented mini e-commerce platform built with Next.js, TypeScript, Supabase, Zustand, TanStack Query, Formik, and Tailwind CSS, featuring authentication, product browsing, cart management, checkout, and StarPay payment integration.
 
-```txt
-🚀 Live Demo
-Production URL: https://mini-e-commerce-dkxg.vercel.app/
-GitHub Repository: https://github.com/YonasEngineer/mini-e-commerce
-```
+## 🚀 Live Demo
+
+- **Production URL:** [Live Site](https://mini-e-commerce-dkxg.vercel.app/)
+- **GitHub Repository:** [GitHub Repo](https://github.com/YonasEngineer/mini-e-commerce)
+
+
 📁 Project Architecture
 ## Key Architectural Decisions
 
