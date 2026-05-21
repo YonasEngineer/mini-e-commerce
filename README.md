@@ -39,6 +39,9 @@ Supabase is used for:
 - User sessions
 - Product and order storage
 
+
+
+```txt
 MINI-E-COMMERCE/
 │
 ├── app/                          # Next.js App Router
@@ -105,6 +108,7 @@ MINI-E-COMMERCE/
 ├── README.md
 ├── tsconfig.json
 └── tsconfig.tsbuildinfo
+```
 
 Key Design Principle
  UI is fully separated from business logic
@@ -114,13 +118,16 @@ Key Design Principle
  Zustand → UI state (cart, UI flags)
  TanStack Query → server state (products, orders)
 
+
  
 🧾 Assumptions Made
+
  Products are pre-seeded in Supabase
  StarPay returns a redirect URL after initialization
  User authentication is required before checkout
  Cart is user-specific after login
  Guest cart is supported locally before authentication
+
 
 ## Tradeoffs Considered
 
@@ -139,8 +146,6 @@ Payment initialization adds additional backend complexity but improves security 
 
 
 ## Environment Variables
-
-Create a `.env.local` file in the root of the project and add the following variables:
 
 DATABASE_URL=
 Used by Prisma to connect to the Supabase PostgreSQL database via connection pooling.
